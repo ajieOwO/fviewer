@@ -116,14 +116,14 @@ impl Files {
     }
 }
 
-pub fn scan_files(path: &str) -> Files {
+pub fn scan_files(path: &str, deep: u32) -> Files {
     let mut index_stack: Vec<usize> = Vec::new();
-    let root = Rc::new(RefCell::new(Files::new(PathBuf::from(path))));
+    let root: Rc<RefCell<Files>> = Rc::new(RefCell::new(Files::new(PathBuf::from(path))));
     let mut current_file: Weak<RefCell<Files>> = Rc::downgrade(&root); // 此指针不可能为空
 
     loop {
         // 索引栈不为空时，尝试指向下一个元素；找不到就指向父元素
-        current_file = update_file_ptr(&mut index_stack, current_file);
+        current_file = update_file_ptr(&mut index_stack, deep, current_file);
         // 尝试持有文件的指针
         let current = current_file.upgrade();
         if current.is_none() {
@@ -180,12 +180,14 @@ pub fn scan_files(path: &str) -> Files {
 ### 更新文件指针
 ### 参数
 - `index_stack`: 索引栈
+- `deep`: 遍历深度
 - `current_file`：当前文件指针
 ### 返回值
 - 更新后的文件指针
 */
 fn update_file_ptr(
     index_stack: &mut Vec<usize>,
+    deep: u32,
     current_file: Weak<RefCell<Files>>,
 ) -> Weak<RefCell<Files>> {
     // 索引栈为空时，解析根文件
@@ -205,15 +207,18 @@ fn update_file_ptr(
     let iter = current.child.iter();
     let mut has_sub = false;
 
-    // 遍历迭代器
-    for (i, sub_file) in iter.enumerate() {
-        // 尝试找到一个类型为文件夹的子元素
-        if let FileType::Directory = sub_file.borrow().file_type {
-            index_stack.push(i);
-            has_sub = true;
-            // 指针指向文件夹类型子元素
-            result = Rc::downgrade(sub_file);
-            break;
+    // 索引栈深度小于目标值，才向子元素索引
+    if index_stack.len() < deep as usize {
+        // 遍历迭代器
+        for (i, sub_file) in iter.enumerate() {
+            // 尝试找到一个类型为文件夹的子元素
+            if let FileType::Directory = sub_file.borrow().file_type {
+                index_stack.push(i);
+                has_sub = true;
+                // 指针指向文件夹类型子元素
+                result = Rc::downgrade(sub_file);
+                break;
+            }
         }
     }
 
