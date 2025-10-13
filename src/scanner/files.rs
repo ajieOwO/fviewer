@@ -147,21 +147,22 @@ impl fmt::Display for FileInTree<'_> {
             let iter = current.child[*index..].iter();
             let num = current.child.len();
             for file in iter {
+                let file_ref = file.borrow();
                 *index += 1;
                 // 输出到控制台
-                writeln!(
+                writeln!( 
                     f,
                     " {}{} {}",
                     " ".repeat(2 * (len - 1)),
                     if *index < num { "├─" } else { "└─" },
-                    file.borrow().get_colored_name()
+                    file_ref.get_colored_name()
                 )?;
 
                 // 为文件时入栈
-                if let FileType::Directory = file.borrow().file_type
-                    && !file.borrow().child.is_empty()
+                if let FileType::Directory = file_ref.file_type
+                    && !file_ref.child.is_empty()
                 {
-                    current_file = Rc::downgrade(&current.child[0]);
+                    current_file = Rc::downgrade(file);
                     index_stack.push(0);
                     break;
                 }
@@ -172,7 +173,6 @@ impl fmt::Display for FileInTree<'_> {
                 index_stack.pop();
                 current_file = current.parent.clone();
             }
-            break;
         }
         return Ok(());
     }
