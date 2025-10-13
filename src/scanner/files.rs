@@ -132,6 +132,7 @@ impl fmt::Display for FileInTree<'_> {
         index_stack.push(0);
         // println!("current_file init as {:?}", current_file.upgrade());
         let mut current_file = Rc::downgrade(current);
+        let mut prefix: Vec<&str> = Vec::new();
 
         loop {
             if index_stack.is_empty() {
@@ -150,20 +151,22 @@ impl fmt::Display for FileInTree<'_> {
                 let file_ref = file.borrow();
                 *index += 1;
                 // 输出到控制台
-                writeln!( 
+                writeln!(
                     f,
-                    " {}{} {}",
-                    " ".repeat(2 * (len - 1)),
+                    "{}{}{}",
+                    prefix.join(""),
                     if *index < num { "├─" } else { "└─" },
                     file_ref.get_colored_name()
                 )?;
 
-                // 为文件时入栈
+                // 为文件夹时入栈
                 if let FileType::Directory = file_ref.file_type
                     && !file_ref.child.is_empty()
                 {
                     current_file = Rc::downgrade(file);
+                    prefix.push(if *index < num { "│ " } else { "  " });
                     index_stack.push(0);
+
                     break;
                 }
             }
@@ -172,6 +175,9 @@ impl fmt::Display for FileInTree<'_> {
             if index_stack.len() == len {
                 index_stack.pop();
                 current_file = current.parent.clone();
+                if !prefix.is_empty() {
+                    prefix.remove(prefix.len() - 1);
+                }
             }
         }
         return Ok(());
