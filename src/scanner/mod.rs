@@ -145,7 +145,7 @@ fn update_file_ptr(
         // 尝试找到一个类型为文件夹的兄弟元素
         for (i, sub_file) in iter.enumerate() {
             if let FileType::Directory = sub_file.borrow().file_type {
-                *index += i;
+                *index += i + 1;
                 has_sub = true;
                 // 指针指向文件夹类型弟元素
                 result = Rc::downgrade(sub_file);
