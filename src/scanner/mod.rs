@@ -7,6 +7,7 @@ use std::{
 };
 
 use crate::scanner::files::{FileType, Files};
+pub use files::{FileInTree, FileWithName};
 
 /**
 ### 扫描文件
@@ -16,7 +17,7 @@ use crate::scanner::files::{FileType, Files};
 ### 返回值
 - 文件结构树
 */
-pub fn scan_files(path: &str, deep: u32) -> Files {
+pub fn scan_files(path: &str, deep: u32) -> Rc<RefCell<Files>> {
     let mut index_stack: Vec<usize> = Vec::new();
     let root: Rc<RefCell<Files>> = Rc::new(RefCell::new(Files::new(PathBuf::from(path))));
     let mut current_file: Weak<RefCell<Files>> = Rc::downgrade(&root); // 此指针不可能为空
@@ -73,7 +74,7 @@ pub fn scan_files(path: &str, deep: u32) -> Files {
         }
     }
 
-    return Rc::try_unwrap(root).unwrap().into_inner();
+    return root;
 }
 
 /**

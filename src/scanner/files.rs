@@ -1,4 +1,13 @@
-use std::{cell::RefCell, error::Error, fs, path::PathBuf, rc::{Rc, Weak}};
+pub use std::{
+    cell::RefCell,
+    error::Error,
+    fmt::{self, Result},
+    fs,
+    path::PathBuf,
+    rc::{Rc, Weak},
+};
+
+use colored::{ColoredString, Colorize};
 
 /**
 ### 文件类型
@@ -56,28 +65,6 @@ pub struct Files {
     err: Option<Box<dyn Error>>,
 }
 
-// impl fmt::Display for Files {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         if f.alternate() {
-//             write!(
-//                 f,
-//                 "文件: {{路径：{}， 文件类型：{}，子文件：{}，错误：{}}}",
-//                 match self.path.to_str() {
-//                     Some(str) => str,
-//                     None => "[空]",
-//                 },
-//                 match self.file_type {
-//                     FileType::Directory => "文件夹",
-//                     FileType::File => "文件",
-//                     _ => "其它",
-//                 },
-//             )
-//         } else {
-//             write!(f, "Files")
-//         }
-//     }
-// }
-
 impl Files {
     pub fn new(path: PathBuf) -> Self {
         let metadata = fs::metadata(&path);
@@ -107,5 +94,86 @@ impl Files {
                 Err(err) => Some(Box::new(err)),
             },
         }
+    }
+
+    pub fn get_colored_name(&self) -> ColoredString {
+        let file_name = self.path.file_name().unwrap_or(self.path.as_os_str());
+        let file_name = file_name.to_str().unwrap();
+        match self.file_type {
+            FileType::Directory => file_name.bright_blue().bold(),
+            _ => file_name.white(),
+        }
+    }
+}
+
+pub struct FileWithName<'a>(pub &'a Rc<RefCell<Files>>);
+pub struct FileInTree<'a>(pub &'a Rc<RefCell<Files>>);
+
+impl fmt::Display for FileWithName<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result {
+        for file in &self.0.borrow().child {
+            let file = file.borrow();
+            write!(f, "{}  ", file.get_colored_name()).unwrap();
+        }
+        write!(f, "")
+    }
+}
+
+impl fmt::Display for FileInTree<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result {
+        let current = self.0;
+        writeln!(f, "{}", current.borrow().get_colored_name())?;
+
+        if current.borrow().child.is_empty() {
+            return Ok(());
+        }
+
+        let mut index_stack: Vec<usize> = Vec::new();
+        index_stack.push(0);
+        // println!("current_file init as {:?}", current_file.upgrade());
+        let mut current_file = Rc::downgrade(current);
+
+        loop {
+            if index_stack.is_empty() {
+                break;
+            }
+
+            let current = current_file.upgrade().unwrap();
+            let current = current.borrow();
+
+            // println!("current options is {:?}", current);
+            let len = index_stack.len();
+            let index = index_stack.last_mut().unwrap();
+            let iter = current.child[*index..].iter();
+            let num = current.child.len();
+            for file in iter {
+                *index += 1;
+                // 输出到控制台
+                writeln!(
+                    f,
+                    " {}{} {}",
+                    " ".repeat(2 * (len - 1)),
+                    if *index < num { "├─" } else { "└─" },
+                    file.borrow().get_colored_name()
+                )?;
+
+                // 为文件时入栈
+                if let FileType::Directory = file.borrow().file_type
+                    && !file.borrow().child.is_empty()
+                {
+                    current_file = Rc::downgrade(&current.child[0]);
+                    index_stack.push(0);
+                    break;
+                }
+            }
+
+            // 当索引栈未加深时，弹栈返回上一层文件夹。
+            if index_stack.len() == len {
+                index_stack.pop();
+                current_file = current.parent.clone();
+            }
+            break;
+        }
+        return Ok(());
     }
 }
