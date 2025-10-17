@@ -134,6 +134,8 @@ impl fmt::Display for FileInTree<'_> {
         let mut current_file = Rc::downgrade(current);
         let mut prefix: Vec<&str> = Vec::new();
 
+        let mut count: (usize, usize) = (0, 0);
+
         loop {
             if index_stack.is_empty() {
                 break;
@@ -160,14 +162,17 @@ impl fmt::Display for FileInTree<'_> {
                 )?;
 
                 // 为文件夹时入栈
-                if let FileType::Directory = file_ref.file_type
-                    && !file_ref.child.is_empty()
-                {
-                    current_file = Rc::downgrade(file);
-                    prefix.push(if *index < num { "│ " } else { "  " });
-                    index_stack.push(0);
+                if let FileType::Directory = file_ref.file_type {
+                    count.0 += 1;
+                    if !file_ref.child.is_empty() {
+                        current_file = Rc::downgrade(file);
+                        prefix.push(if *index < num { "│ " } else { "  " });
+                        index_stack.push(0);
 
-                    break;
+                        break;
+                    }
+                } else {
+                    count.1 += 1;
                 }
             }
 
@@ -180,6 +185,7 @@ impl fmt::Display for FileInTree<'_> {
                 }
             }
         }
+        println!("共有子文件夹{}个，文件{}个", count.0, count.1);
         return Ok(());
     }
 }
