@@ -124,17 +124,15 @@ impl fmt::Display for FileInTree<'_> {
         let current = self.0;
         writeln!(f, "{}", current.borrow().get_colored_name())?;
 
-        if current.borrow().child.is_empty() {
-            return Ok(());
-        }
-
         let mut index_stack: Vec<usize> = Vec::new();
-        index_stack.push(0);
-        // println!("current_file init as {:?}", current_file.upgrade());
+        let mut count: (usize, usize) = (0, 0);
+        if current.borrow().child.is_empty() {
+            count.1 += 1;
+        } else {
+            index_stack.push(0);
+        }
         let mut current_file = Rc::downgrade(current);
         let mut prefix: Vec<&str> = Vec::new();
-
-        let mut count: (usize, usize) = (0, 0);
 
         loop {
             if index_stack.is_empty() {
