@@ -10,15 +10,14 @@ use crate::scanner::{
     files::{FileType, Files},
 };
 
-/**
-### 扫描文件
-### 参数
-- `path`: 目标路径
-- `deep`: 遍历深度
-- `all`: 是否展示所有文件
-### 返回值
-- 文件结构树
-*/
+
+/// ### 扫描文件
+/// ### 参数
+/// - `path`: 目标路径
+/// - `deep`: 遍历深度
+/// - `all`: 是否展示所有文件
+/// ### 返回值
+/// - 文件结构树
 pub fn scan_files(path: &str, deep: usize, all: bool) -> Rc<RefCell<Files>> {
     let mut index_stack: Vec<usize> = Vec::new();
     let root: Rc<RefCell<Files>> = Rc::new(RefCell::new(Files::new(PathBuf::from(path))));

@@ -5,15 +5,14 @@ use std::{
 
 use crate::scanner::files::{FileType, Files};
 
-/**
-### 更新文件指针
-### 参数
-- `index_stack`: 索引栈
-- `deep`: 遍历深度
-- `current_file`：当前文件指针
-### 返回值
-- 更新后的文件指针
-*/
+
+/// ### 更新文件指针
+/// ### 参数
+/// - `index_stack`: 索引栈
+/// - `deep`: 遍历深度
+/// - `current_file`：当前文件指针
+/// ### 返回值
+/// - 更新后的文件指针
 pub fn traverse(
     index_stack: &mut Vec<usize>,
     deep: usize,

@@ -9,59 +9,46 @@ pub use std::{
 
 use colored::{ColoredString, Colorize};
 
-/**
-### 文件类型
-包含文件夹、普通文件、软连接和其它类型
-*/
+/// ### 文件类型
+/// 包含文件夹、普通文件、软连接和其它类型
+
 #[derive(Debug)]
 pub enum FileType {
-    /**
-     ### 文件夹
-     包含任意个子文件，同时持有子文件的所有权
-    */
+    /// ### 文件夹
+    /// 包含任意个子文件，同时持有子文件的所有权
     Directory,
-    /**
-     ### 普通文件
-    */
+
+    /// ### 普通文件
     File,
-    /**
-    ### 软链接
-    指向特定文件
-    */
+
+    /// ### 软链接
+    /// 指向特定文件
     SoftLink(String),
-    /**
-    ### 其它类型
-    */
+
+    ///### 其它类型
     Other,
-    /**
-    ### 打开失败类型
-     */
+
+    /// ### 打开失败类型
     Invalid,
 }
 
 #[derive(Debug)]
 pub struct Files {
-    /**
-    ### 文件名
-     */
+    ///### 文件名
     pub path: PathBuf,
-    /**
-    ### 文件类型
-    */
+
+    ///### 文件类型
     pub file_type: FileType,
-    /**
-    ### 父文件夹
-    不持有所有权
-    */
+
+    /// ### 父文件夹
+    /// 不持有所有权
     pub parent: Weak<RefCell<Files>>,
-    /**
-    ### 子文件列表
-    持有所有权
-     */
+
+    ///### 子文件列表
+    /// 持有所有权
     pub child: Vec<Rc<RefCell<Files>>>,
-    /**
-    ### 出现的错误
-     */
+
+    ///### 出现的错误
     err: Option<Box<dyn Error>>,
 }
 
