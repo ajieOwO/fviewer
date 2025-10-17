@@ -23,7 +23,7 @@ pub enum FileType {
 
     /// ### 软链接
     /// 指向特定文件
-    SoftLink(String),
+    SoftLink(PathBuf),
 
     ///### 其它类型
     Other,
@@ -59,15 +59,20 @@ impl Files {
             if metadata.is_err() {
                 FileType::Invalid
             } else {
+                let link_metadata = fs::symlink_metadata(&path);
                 let metadata = metadata.as_ref().unwrap();
-                if metadata.is_file() {
-                    FileType::File
-                } else if metadata.is_dir() {
-                    FileType::Directory
-                } else if metadata.is_symlink() {
-                    FileType::SoftLink(String::from(""))
+                if link_metadata
+                    .map(|meta| meta.file_type().is_symlink())
+                    .unwrap_or(false)
+                {
+                    let target = fs::read_link(&path).unwrap();
+                    FileType::SoftLink(target)
                 } else {
-                    FileType::Other
+                    match () {
+                        _ if metadata.is_file() => FileType::File,
+                        _ if metadata.is_dir() => FileType::Directory,
+                        _ => FileType::Other,
+                    }
                 }
             }
         };
@@ -83,12 +88,25 @@ impl Files {
         }
     }
 
-    pub fn get_colored_name(&self) -> ColoredString {
+    pub fn get_colored_name(&self) -> Vec<ColoredString> {
         let file_name = self.path.file_name().unwrap_or(self.path.as_os_str());
         let file_name = file_name.to_str().unwrap();
-        match self.file_type {
-            FileType::Directory => file_name.bright_blue().bold(),
-            _ => file_name.white(),
+        let mut result = vec![Self::get_color_str(&self.file_type, file_name)];
+        if let FileType::SoftLink(target) = &self.file_type {
+            let target_file = Files::new(target.clone());
+            let target_path = target.to_str().unwrap();
+            result.push(" -> ".bold());
+            result.push(Self::get_color_str(&target_file.file_type, target_path));
+        }
+
+        return result;
+    }
+
+    fn get_color_str(file_type: &FileType, str: &str) -> ColoredString {
+        match file_type {
+            FileType::Directory => str.bright_blue().bold(),
+            FileType::SoftLink(_) => str.bright_cyan().bold(),
+            _ => str.white(),
         }
     }
 }
@@ -100,7 +118,7 @@ impl fmt::Display for FileWithName<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result {
         for file in &self.0.borrow().child {
             let file = file.borrow();
-            write!(f, "{}  ", file.get_colored_name()).unwrap();
+            write!(f, "{}  ", file.get_colored_name()[0]).unwrap();
         }
         write!(f, "")
     }
@@ -109,7 +127,10 @@ impl fmt::Display for FileWithName<'_> {
 impl fmt::Display for FileInTree<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result {
         let current = self.0;
-        writeln!(f, "{}", current.borrow().get_colored_name())?;
+        for str in current.borrow().get_colored_name() {
+            write!(f, "{}", str)?;
+        }
+        writeln!(f, "")?;
 
         let mut index_stack: Vec<usize> = Vec::new();
         let mut count: (usize, usize) = (0, 0);
@@ -138,13 +159,16 @@ impl fmt::Display for FileInTree<'_> {
                 let file_ref = file.borrow();
                 *index += 1;
                 // 输出到控制台
-                writeln!(
+                write!(
                     f,
-                    "{}{}{}",
+                    "{}{}",
                     prefix.join(""),
-                    if *index < num { "├─" } else { "└─" },
-                    file_ref.get_colored_name()
+                    if *index < num { "├─" } else { "└─" }
                 )?;
+                for str in file_ref.get_colored_name() {
+                    write!(f, "{}", str)?;
+                }
+                writeln!(f, "")?;
 
                 // 为文件夹时入栈
                 if let FileType::Directory = file_ref.file_type {
