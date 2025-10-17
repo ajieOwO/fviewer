@@ -50,6 +50,9 @@ pub fn scan_files(path: &str, deep: u32) -> Rc<RefCell<Files>> {
                     file.parent = current_file.clone(); // 设置父文件夹指针
                     current.child.push(Rc::new(RefCell::new(file)));
                 }
+                current
+                    .child
+                    .sort_by(|a, b| a.borrow().path.cmp(&b.borrow().path));
             }
             _ => {
                 println!("_");
