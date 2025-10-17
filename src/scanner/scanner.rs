@@ -15,10 +15,11 @@ use crate::scanner::{
 ### 参数
 - `path`: 目标路径
 - `deep`: 遍历深度
+- `all`: 是否展示所有文件
 ### 返回值
 - 文件结构树
 */
-pub fn scan_files(path: &str, deep: u32) -> Rc<RefCell<Files>> {
+pub fn scan_files(path: &str, deep: usize, all: bool) -> Rc<RefCell<Files>> {
     let mut index_stack: Vec<usize> = Vec::new();
     let root: Rc<RefCell<Files>> = Rc::new(RefCell::new(Files::new(PathBuf::from(path))));
     let mut current_file: Weak<RefCell<Files>> = Rc::downgrade(&root); // 此指针不可能为空
@@ -47,6 +48,18 @@ pub fn scan_files(path: &str, deep: u32) -> Rc<RefCell<Files>> {
                     }
                     // 拼接完整路径
                     let file_path = file_name.unwrap().path();
+                    
+                    if !all
+                        && file_path
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .starts_with(".")
+                    {
+                        // 未选择查看所有文件时，忽略隐藏文件
+                        continue;
+                    }
                     let mut file: Files = Files::new(file_path);
                     file.parent = current_file.clone(); // 设置父文件夹指针
                     current.child.push(Rc::new(RefCell::new(file)));

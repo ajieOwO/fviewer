@@ -16,7 +16,7 @@ use crate::scanner::files::{FileType, Files};
 */
 pub fn traverse(
     index_stack: &mut Vec<usize>,
-    deep: u32,
+    deep: usize,
     current_file: Weak<RefCell<Files>>,
 ) -> Weak<RefCell<Files>> {
     // 索引栈为空时，解析根文件
@@ -43,7 +43,7 @@ pub fn traverse(
             index_stack.pop();
         } else {
             // 索引栈深度小于目标值，才向子元素索引
-            if index_stack.len() < deep as usize {
+            if index_stack.len() < deep {
                 // 遍历迭代器
                 for (i, sub_file) in iter.enumerate() {
                     // 尝试找到一个类型为文件夹的子元素
