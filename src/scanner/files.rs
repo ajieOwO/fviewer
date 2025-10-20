@@ -1,3 +1,4 @@
+use std::os::unix::fs::PermissionsExt;
 pub use std::{
     cell::RefCell,
     error::Error,
@@ -40,6 +41,9 @@ pub struct Files {
     ///### 文件类型
     pub file_type: FileType,
 
+    /// ### 文件类型(mode)
+    pub mode_str: String,
+
     /// ### 父文件夹
     /// 不持有所有权
     pub parent: Weak<RefCell<Files>>,
@@ -76,8 +80,30 @@ impl Files {
                 }
             }
         };
+        let mode = metadata
+            .as_ref()
+            .map(|metadata| metadata.permissions().mode())
+            .unwrap_or(0);
+        let mode_str: String = String::from(format!(
+            "{}{}{}{}",
+            match mode >> 12 {
+                0o10 => '-', // 普通文件
+                0o04 => 'd', // 文件夹
+                0o12 => 'l', // 符号链接
+                0o02 => 'c', // 字符设备
+                0o06 => 'b', // 块设备
+                0o01 => 'p', // FIFO管道
+                0o14 => 's', // 套接字
+                _ => '?',    // 未知类型
+            },
+            Self::get_permission((mode & 0o700) >> 6),
+            Self::get_permission((mode & 0o070) >> 3),
+            Self::get_permission(mode & 0o007),
+        ));
+
         Files {
             path,
+            mode_str,
             file_type,
             parent: Weak::new(),
             child: Vec::new(),
@@ -109,6 +135,15 @@ impl Files {
             _ => str.white(),
         }
     }
+
+    fn get_permission(mode: u32) -> String {
+        format!(
+            "{}{}{}",
+            if mode & 0b100 != 0 { 'r' } else { '-' },
+            if mode & 0b100 != 0 { 'w' } else { '-' },
+            if mode & 0b100 != 0 { 'x' } else { '-' }
+        )
+    }
 }
 
 pub struct FileWithName<'a>(pub &'a Rc<RefCell<Files>>);
@@ -127,6 +162,7 @@ impl fmt::Display for FileWithName<'_> {
 impl fmt::Display for FileInTree<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result {
         let current = self.0;
+        write!(f, "{} ", current.borrow().mode_str)?;
         for str in current.borrow().get_colored_name() {
             write!(f, "{}", str)?;
         }
@@ -165,8 +201,9 @@ impl fmt::Display for FileInTree<'_> {
                     prefix.join(""),
                     if *index < num { "├─" } else { "└─" }
                 )?;
+                write!(f, "{}", file_ref.mode_str)?;
                 for str in file_ref.get_colored_name() {
-                    write!(f, "{}", str)?;
+                    write!(f, " {} ", str)?;
                 }
                 writeln!(f, "")?;
 
