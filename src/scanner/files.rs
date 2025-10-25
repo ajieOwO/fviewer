@@ -118,11 +118,20 @@ impl Files {
         let file_name = self.path.file_name().unwrap_or(self.path.as_os_str());
         let file_name = file_name.to_str().unwrap();
         let mut result = vec![Self::get_color_str(&self.file_type, file_name)];
-        if let FileType::SoftLink(target) = &self.file_type {
-            let target_file = Files::new(target.clone());
-            let target_path = target.to_str().unwrap();
-            result.push(" -> ".bold());
-            result.push(Self::get_color_str(&target_file.file_type, target_path));
+
+        match &self.file_type {
+            FileType::SoftLink(target) => {
+                let target_file = Files::new(target.clone());
+                let target_path = target.to_str().unwrap();
+                result.push(" -> ".bold());
+                result.push(Self::get_color_str(&target_file.file_type, target_path));
+            },
+            FileType::File => {
+                if self.mode_str.ends_with("x") {
+                    result[0] = result[0].clone().green();
+                }
+            }
+            _ => {}
         }
 
         return result;
