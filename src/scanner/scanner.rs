@@ -10,7 +10,6 @@ use crate::scanner::{
     files::{FileType, Files},
 };
 
-
 /// ### 扫描文件
 /// ### 参数
 /// - `path`: 目标路径
@@ -39,6 +38,10 @@ pub fn scan_files(path: &str, deep: usize, all: bool) -> Rc<RefCell<Files>> {
         }
 
         let read_dir = fs::read_dir(&current.path);
+        if let Err(err) = read_dir {
+            current.err = Some(Box::new(err));
+            continue;
+        }
 
         // 遍历处理文件夹下的文件
         for file_name in read_dir.unwrap() {

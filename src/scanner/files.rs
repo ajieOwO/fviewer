@@ -53,7 +53,7 @@ pub struct Files {
     pub child: Vec<Rc<RefCell<Files>>>,
 
     ///### 出现的错误
-    err: Option<Box<dyn Error>>,
+    pub err: Option<Box<dyn Error>>,
 }
 
 impl Files {
@@ -166,6 +166,9 @@ impl fmt::Display for FileInTree<'_> {
         for str in current.borrow().get_colored_name() {
             write!(f, "{}", str)?;
         }
+        if let Some(err) = &current.borrow().err {
+            write!(f, " {}", err)?;
+        }
         writeln!(f, "")?;
 
         let mut index_stack: Vec<usize> = Vec::new();
@@ -204,6 +207,9 @@ impl fmt::Display for FileInTree<'_> {
                 write!(f, "{}", file_ref.mode_str)?;
                 for str in file_ref.get_colored_name() {
                     write!(f, " {} ", str)?;
+                }
+                if let Some(err) = &file_ref.err {
+                    write!(f, " {}", err)?;
                 }
                 writeln!(f, "")?;
 
